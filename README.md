@@ -116,61 +116,117 @@ npm test
 
 ## Examples
 
-### Lambda Labs GPU Training
+Comprehensive examples are available in the [`examples/`](examples/) directory. Each example demonstrates launching infrastructure, using sessh to manage persistent sessions, and cleaning up resources.
+
+### Quick Examples
+
+#### Local/Localhost
 
 ```typescript
 import { SesshClient } from "sessh-sdk";
 
+const client = new SesshClient({
+  alias: "local-test",
+  host: "user@localhost"
+});
+
+await client.open();
+await client.run("echo 'Hello from sessh!'");
+const logs = await client.logs(50);
+console.log(logs.output);
+await client.close();
+```
+
+#### AWS EC2
+
+```typescript
+import { SesshClient } from "sessh-sdk";
+
+// Launch EC2 instance, get IP (example)
 const ip = "203.0.113.10";
 const client = new SesshClient({
-  alias: "agent",
+  alias: "aws-agent",
+  host: `ubuntu@${ip}`
+});
+
+await client.open();
+await client.run("python train.py");
+const logs = await client.logs(400);
+await client.close();
+```
+
+#### Lambda Labs GPU
+
+```typescript
+import { SesshClient } from "sessh-sdk";
+
+// Launch Lambda Labs instance, get IP (example)
+const ip = "203.0.113.10";
+const client = new SesshClient({
+  alias: "lambda-agent",
   host: `ubuntu@${ip}`,
   identity: "~/.ssh/id_ed25519"
 });
 
-// Open session
 await client.open();
-
-// Install dependencies
 await client.run("pip install torch torchvision");
-
-// Train model
 await client.run("python train.py");
-
-// Check logs
 const logs = await client.logs(400);
 console.log(logs.output);
-
-// Close session
 await client.close();
 ```
 
-### Autonomous Workflow
+### Available Examples
 
-```typescript
-import { SesshClient } from "sessh-sdk";
+All examples follow the same pattern:
+1. Launch infrastructure (instance/container)
+2. Wait for SSH to be ready
+3. Open sessh session
+4. Run commands (state persists between commands)
+5. Fetch logs
+6. Clean up resources
 
-const client = new SesshClient({
-  alias: "builder",
-  host: "build@ci-host"
-});
+**Example Files:**
+- [`examples/local.ts`](examples/local.ts) - Localhost/local VM
+- [`examples/docker.ts`](examples/docker.ts) - Docker container
+- [`examples/aws.ts`](examples/aws.ts) - AWS EC2
+- [`examples/gcp.ts`](examples/gcp.ts) - Google Cloud Platform
+- [`examples/lambdalabs.ts`](examples/lambdalabs.ts) - Lambda Labs GPU
+- [`examples/azure.ts`](examples/azure.ts) - Microsoft Azure
+- [`examples/digitalocean.ts`](examples/digitalocean.ts) - DigitalOcean
+- [`examples/docker-compose.ts`](examples/docker-compose.ts) - Docker Compose
 
-try {
-  await client.open();
-  
-  // Build
-  await client.run("cd /repo && make build");
-  
-  // Test
-  await client.run("make test");
-  
-  // Get results
-  const logs = await client.logs(1000);
-  console.log(logs.output);
-  
-} finally {
-  await client.close();
-}
+**Running Examples:**
+```bash
+# Build first
+npm run build
+
+# Local example
+node dist/examples/local.js localhost
+
+# AWS example (requires AWS credentials)
+export AWS_REGION=us-east-1
+export AWS_KEY_NAME=my-key
+node dist/examples/aws.js
+
+# Lambda Labs example (requires API key)
+export LAMBDA_API_KEY=sk_live_...
+export LAMBDA_SSH_KEY=my-ssh-key
+node dist/examples/lambdalabs.js
+```
+
+### Integration Tests
+
+Integration tests are available in [`tests/examples.test.ts`](tests/examples.test.ts). These tests require real infrastructure and are skipped by default.
+
+**Running Integration Tests:**
+```bash
+# Enable integration tests
+export SESSH_INTEGRATION_TESTS=1
+
+# For local tests
+export SESSH_TEST_HOST=localhost
+npm test -- tests/examples.test.ts
 ```
 
 ### Error Handling
@@ -189,6 +245,8 @@ try {
 } catch (error) {
   console.error("Error:", error);
   process.exit(1);
+} finally {
+  await client.close();
 }
 ```
 
