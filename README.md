@@ -81,6 +81,12 @@ Check whether the SSH controlmaster and tmux session exist.
 #### `close(): Promise<SesshResponse>`
 Kill tmux session and close the controlmaster.
 
+#### `keys(keySequence: string): Promise<SesshResponse>`
+Send individual key events to the tmux session (no Enter key). Useful for interactive TUI programs like vim or nano.
+
+#### `pane(lines?: number): Promise<LogsResponse>`
+Read the current pane state from the tmux session. Useful for reading the current state of interactive TUI programs.
+
 ## Types
 
 ```typescript
@@ -173,6 +179,39 @@ await client.run("pip install torch torchvision");
 await client.run("python train.py");
 const logs = await client.logs(400);
 console.log(logs.output);
+await client.close();
+```
+
+#### Interactive TUI Programs
+
+```typescript
+import { SesshClient } from "sessh-sdk";
+
+const client = new SesshClient({
+  alias: "editor",
+  host: "ubuntu@host"
+});
+
+await client.open();
+
+// Launch vim
+await client.run("vim file.txt");
+
+// Read current pane to see vim's state
+const pane = await client.pane(30);
+console.log(pane.output);
+
+// Send key sequences to navigate and edit
+await client.keys("i");        // Enter insert mode
+await client.keys("Hello");   // Type text
+await client.keys("Esc");     // Exit insert mode
+await client.keys(":wq");     // Save and quit
+await client.keys("Enter");   // Confirm
+
+// Read pane again to verify
+const pane2 = await client.pane(30);
+console.log(pane2.output);
+
 await client.close();
 ```
 

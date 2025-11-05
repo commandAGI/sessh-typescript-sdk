@@ -152,5 +152,31 @@ export class SesshClient {
       "Interactive attach not supported via SDK. Use CLI: sessh attach"
     );
   }
+
+  /**
+   * Send individual key events to the tmux session (no Enter key).
+   * Useful for interactive TUI programs like vim or nano.
+   */
+  async keys(keySequence: string): Promise<SesshResponse> {
+    const args = [
+      "keys",
+      this.options.alias,
+      this.options.host,
+      "--",
+      keySequence,
+    ];
+    const result = await runSessh(args, this.options);
+    return parseResponse<SesshResponse>(result);
+  }
+
+  /**
+   * Read the current pane state from the tmux session.
+   * Useful for reading the current state of interactive TUI programs.
+   */
+  async pane(lines: number = 300): Promise<LogsResponse> {
+    const args = ["pane", this.options.alias, this.options.host, String(lines)];
+    const result = await runSessh(args, this.options);
+    return parseResponse<LogsResponse>(result);
+  }
 }
 
